@@ -1,241 +1,173 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include "types.h"
-#include "tag_edit.h"
-#include "test.h"
+#include <stdlib.h>
+#include "address_book.h"
 
-/*Function for read and validAate args*/
-Status read_and_validate_edit_args(char *argv[], TagEdit *tagedit)
+/*Function for reading the contents form the file*/
+int read_file_contents(AddressBook *addressbook, Readinputs *readinputs)
 {
-	strcpy(tagedit->src_mp3_fname, argv[2]);
+	int bytes, index;
+	char buff[32], temp[2];
+	int count = 0;
 
-	printf("MP3 file name		: %s\n", tagedit->src_mp3_fname);
-
-	return e_success;
-}
-
-/*opening the mp3 file to edit*/
-Status open_edit_files(TagEdit *tagedit)
-{
-	tagedit->fptr_src_mp3 = fopen(tagedit->src_mp3_fname, "r+");
-
-	/*sanity check*/
-	if (tagedit->fptr_src_mp3 == NULL)
+	//running the loop upto feof returns 0
+	for (index = 0; feof(readinputs->fptr) == 0; index++)
 	{
-		perror("fopen");
+		//incrementing the count
+		count++;
 
-		fprintf(stderr, "ERROR: Unable to open file %s\n", tagedit->src_mp3_fname);
+		// Store name
+		fread(buff, 1, 32, readinputs->fptr);
+		addressbook[index].name = malloc(strlen(buff));
+		strcpy(addressbook[index].name, buff);
 
-		return e_failure;
+		// Store email
+		fread(temp, 1, 2, readinputs->fptr);
+		fread(buff, 1, 32, readinputs->fptr);
+		addressbook[index].email = malloc(strlen(buff));
+		strcpy(addressbook[index].email, buff);
+
+		// Store phone
+		fread(temp, 1, 2, readinputs->fptr);
+		fread(buff, 1, 32, readinputs->fptr);
+		addressbook[index].phone = malloc(strlen(buff));
+		strcpy(addressbook[index].phone, buff);
+
+		// Store city
+		fread(temp, 1, 2, readinputs->fptr);
+		fread(buff, 1, 32, readinputs->fptr);
+		addressbook[index].city = malloc(strlen(buff));
+		strcpy(addressbook[index].city, buff);
+		fread(temp, 1, 1, readinputs->fptr);
 	}
-	return e_success;
+
+	//seeking to the first byte
+	fseek(readinputs->fptr, 0L, SEEK_SET);
 }
 
-/*calculating the size*/
-Status get_size_tag(FILE *fptr)
+/*Function for finding the array position by name*/
+void find_array_pos(AddressBook *addressbook, Readinputs *readinputs)
 {
 	int i_index;
 
-	int size = 0;
-
-	unsigned char ch = '\0';
-
-	/*coverting the char bytes to the integer*/
-	for (i_index = 0; i_index < sizeof (int); i_index++)
+	/*runnng the loop upto 25*/
+	for (i_index = 0; i_index < 25; i_index++)
 	{
-		fread(&ch, sizeof (char), 1, fptr);
-
-		size = size | ch;
-
-		if ((sizeof (int) - 1) != i_index)
-		{
-			size <<= (sizeof (char) * 8);
-		}
-	}
-	return size;
-}
-
-/*option for to edit the tags*/
-int get_tags_to_edit(char *argv[])
-{
-	int i_index;
-
-	char *array[6] = {"-album", "-singer", "-song", "-year", "-track", "-composer"};
-
-	/*for loop to count the options*/
-	for (i_index = 0; i_index < 6; i_index++)
-	{
-		/*comparing the string s and argv*/
-		if (strncmp(argv[2], array[i_index], strlen(array[i_index])) == 0)
+		//comparing the newdata and name in the address book
+		if ((strcmp(readinputs->newdata, addressbook[i_index].name)) == 0)
 		{
 			break;
 		}
-	}
+	}		
 
-	return i_index + 1;
+	//storing the position
+	readinputs->array_pos = i_index;
+
+	printf("%d\n", readinputs->array_pos);
 }
 
-/*Get optins to edit*/
-Status get_options(int option, char *argv[], int argc, TagEdit *tagedit)
-{
-	/*checking the count is 4 or not*/
-	if (argc == 4)
-	{
-		/*invoking the function calls to edit*/
-		option = get_tags_to_edit(argv);
-	}
-	else
-	{
-		/*Read the option*/
-		printf("Enter the option:\n\t1.Album_name\n\t2.Singer_name\n\t3.Song_name\n\t4.Year\n\t5.Track number\n\t6.Composer name\nEnter the option:");
-		scanf("%d", &option);
-	}
 
-	/*switch case for editing the tags*/
-	switch (option)
+/*Function for writing the contents to the address book*/
+void write_to_address_book(AddressBook *addressbook, Readinputs *readinputs)
+{
+	long fptr_pos;
+	char delimeter = '/';
+	char newline = '\n';
+
+	//invoking the function call to find the array position
+	find_array_pos(addressbook, readinputs);
+
+	switch (readinputs->option)
 	{
 		case 1:
 			
-			/*copy the album name tag*/
-			strcpy(tagedit->edit_tags, "TALB");
+			//computing the array position
+			fptr_pos = (readinputs->array_pos * 134) + readinputs->array_pos;
+
+			//seeking to the fptr pos
+			fseek(readinputs->fptr, fptr_pos, SEEK_SET);
+
+			//writing the contents
+			fwrite(readinputs->ename, 1, 32, readinputs->fptr);
 
 			break;
 
 		case 2:
 			
-			/*copy the string name tag*/
-			strcpy(tagedit->edit_tags, "TPE1");
-		
+			//computing the array position
+			fptr_pos = (readinputs->array_pos * 134) + readinputs->array_pos;
+			
+			//seeking to the fptr pos
+			fseek(readinputs->fptr, fptr_pos, SEEK_SET);
+			
+			//writing the contents
+			fwrite(&delimeter, 1, 1, readinputs->fptr);
+			fwrite(&delimeter, 1, 1, readinputs->fptr);
+			fwrite(readinputs->ename, 1, 32, readinputs->fptr);
+			
 			break;
-		
+
 		case 3:
 			
-			/*copy the song name tag*/
-			strcpy(tagedit->edit_tags, "TIT2");
+			//computing the array position
+			fptr_pos = (readinputs->array_pos * 134) + readinputs->array_pos;
+			
+			//seeking to the fptr pos
+			fseek(readinputs->fptr, fptr_pos, SEEK_SET);
+			
+			//writing the contents
+			fwrite(&delimeter, 1, 1, readinputs->fptr);
+			fwrite(&delimeter, 1, 1, readinputs->fptr);
+			fwrite(readinputs->ename, 1, 32, readinputs->fptr);
 			
 			break;
 
 		case 4:
 			
-			/*copy the year tag*/
-			strcpy(tagedit->edit_tags, "TYER");
+			//computing the array position
+			fptr_pos = (readinputs->array_pos * 134) + readinputs->array_pos;
 			
-			break;
-
-		case 5:
+			//seeking to the fptr pos
+			fseek(readinputs->fptr, fptr_pos, SEEK_SET);
 			
-			/*copy the track number tag*/
-			strcpy(tagedit->edit_tags, "TRCK");
-			
-			break;
-
-		case 6:
-			
-			/*copy the composer tag*/
-			strcpy(tagedit->edit_tags, "TCOM");
+			//writing the contents
+			fwrite(&delimeter, 1, 1, readinputs->fptr);
+			fwrite(&delimeter, 1, 1, readinputs->fptr);
+			fwrite(readinputs->ename, 1, 32, readinputs->fptr);
+			fwrite(&newline, 1, 1, readinputs->fptr);
 			
 			break;
 	}
 }
 
-/*Function for Editing the tags*/
-Status edit_tags(TagEdit *tagedit)
+
+/*Function for editing the address book*/
+int edit_address_book(AddressBook *addressbook, Readinputs *readinputs, int option)
 {
-	int size, i_index, length;
+	AddressBook array[25];
 
-	char *ptr, buffer[50], temp[3], nul = '\0';
+	//invoking the inputs function,to read the inforamation
+	if (inputs(addressbook, readinputs, option) < 0)
+		return -1;
 
-	/*invoking the function call to get the size of the tag*/
-	size = get_size_tag(tagedit->fptr_src_mp3);
+	//opening the file in the r+ mode
+	readinputs->fptr = fopen(readinputs->fname, "r+");
 
-	fread(temp, 1, 2, tagedit->fptr_src_mp3);
-
-	/*Reading the new data*/
-	printf("Enter the new data: ");
-
-	scanf("\n%[^\n]", buffer);
-
-	/*computing the length*/
-	length = strlen(buffer);
-
-	/*check whether the length is equal to size or not*/
-	if ((length + 1) == size)
+	//Handling the errors
+	if (readinputs->fptr == NULL)
 	{
-		fwrite(&nul, 1, 1, tagedit->fptr_src_mp3);
-
-		fwrite(&buffer, 1, strlen(buffer), tagedit->fptr_src_mp3);
+		//print the error message
+		perror("fopen");
+		fprintf(stderr, "ERROR : unable to open the file %s\n", readinputs->fname);
+		return 1;
 	}
 
-	/*check whether the length is less than the size or not*/
-	if ((length + 1) < size)
-	{
-		fwrite(&nul, 1, 1, tagedit->fptr_src_mp3);
-		
-		fwrite(&buffer, 1, strlen(buffer), tagedit->fptr_src_mp3);
-		
-		for (i_index = 0; i_index < (size - length - 1); i_index++)
-		{
-			fwrite(&nul, 1, 1, tagedit->fptr_src_mp3);
-		}
-	}
-}
+	//invoking the function call to read the addressbook
+	read_file_contents(array, readinputs);
 
-/*copy the tag names to the file*/
-Status copy_tag_names(TagEdit *tagedit, char *argv[], int argc)
-{
-	int byte_read, i_index;
+	//writing  the contents to the addressbook
+	write_to_address_book(array, readinputs);
 
-	char buffer[4];
-	
-	int option;
-
-	char ch;
-
-
-	/*check whether the argc is 3 or not*/
-	if (argc == 3)
-	{
-		/*invoking the function call*/
-		read_and_validate_edit_args(argv, tagedit);
-	}
-
-	/*opening the files*/
-	open_edit_files(tagedit);
-	
-	/*Reading the options*/
-	get_options(option, argv, argc, tagedit);
-	
-	/*feof return 0 if there are bytes to read*/
-	while (feof(tagedit->fptr_src_mp3) == 0)
-	{
-		fread(&ch, sizeof(char), 1, tagedit->fptr_src_mp3);
-
-		/*checking the ch is equal to edit tags*/
-		if (ch == tagedit->edit_tags[0])
-		{
-			buffer[0] = ch;
-
-			for (i_index = 1; i_index < 4; i_index++)
-			{
-				fread(&ch, sizeof (char), 1, tagedit->fptr_src_mp3);
-				
-				buffer[i_index] = ch;
-			}
-
-			buffer[i_index] = '\0';
-
-			/*comparing the buffer and edit tags*/
-			if (strcmp(buffer, tagedit->edit_tags) == 0)
-			{
-				/*invoking the edit tags function call*/
-				edit_tags(tagedit);
-
-				break;
-			}
-		}
-	}
-
-	/*close file*/
-	fclose(tagedit->fptr_src_mp3);
+	//closing the file
+	fclose(readinputs->fptr);
 }

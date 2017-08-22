@@ -1,88 +1,104 @@
 #include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
 #include <stdlib.h>
-#include "tag_read.h"
-#include "tag_edit.h"
-#include "test.h"
-#include "types.h"
+#include <string.h>
+#include "address_book.h"
 
-/*MAIN PROGRAM*/
-int main(int argc, char *argv[])
+/*Function for reading the file name*/
+void read_file_name(Readinputs *readinputs)
 {
-	/*Declaring the variables*/
-	TagRead tagread;
+	int size;
+	char buff[32], *ptr;
 
-	TagEdit tagedit;
+	/*Reading the file name*/
+	printf("Enter the file name: ");
+	scanf("%s", buff);
+	size = strlen(buff);
 
-	int option;
+	/*Allocating the memory dynamically*/
+	ptr = (char *)malloc(sizeof(char) * size);
+	strcpy(ptr, buff);
 
+	readinputs->fname = ptr;
+}
+
+/*Main program*/
+int main()
+{
+	int size;
+	char buff[32], *ptr;
+	int option, option_1;
 	char ch;
 
+	/*Declaring the variables*/
+	Readinputs readinputs;
+	AddressBook addressbook;
+				
+	/*Reading the file name*/
+	read_file_name(&readinputs);
+	
 	do
 	{
+		/*Reading the option*/
+		printf("1. Insert\n2. Edit\n3. Search\n4. Delete\n5. Display\n6. Exit\nEnter the option: ");
+		scanf("%d", &option);
 
-		/*If the argc is 1 then read the option*/
-		if (argc == 1)
-		{
-			printf("Select the option :\n\t1.Read\n\t2.Edit\n");
-
-			printf("Enter the option :");
-			scanf("%d", &option);
-
-		}
-		/*If it is false, invoke the function call check_operation_type*/
-		else
-		{
-			option = check_operation_type(&argv[1]);
-		}
-
-		/*Switch case for reading and editing*/
 		switch (option)
 		{
-			case e_read:
+			case 1:
 
-				/*If the argc is 1 read the file name*/
-				if (argc == 1)
-				{
-					printf("Enter the file name :");
+				/*Invoking the function call to insert the data into the addressbook*/
+				if ((insert_data_to_addressbook(&addressbook, &readinputs, option)))
+					return 0;
 
-					scanf("%s", tagread.src_mp3_fname);
-				}
+				printf("Inserted Successfully!!!!\n");
+				
+				break;
 
-				/*invoke the call for reading the information of tags*/
-				get_tags(&tagread, argv, argc);
+			case 2:
+				
+				/*Invoking the function call to edit the addressbook*/
+				edit_address_book(&addressbook, &readinputs, option);
+				
+				printf("Edited Successfully!!!!\n");
+				
+				break;
+
+			case 3:
+
+				/*Invoking the function call to search the addressbook*/
+				search_add_book(&readinputs, option);
+				
+				printf("Searched the contact Successfully!!!!\n");
 
 				break;
 
-			case e_edit:
+			case 4:
 				
-				/*If the argc is 1 read the file name*/
-				if (argc == 1)
-				{
-					printf("Enter the file name :");
-
-					scanf("%s", tagedit.src_mp3_fname);
-				}
+				/*Invoking the function call to delete the data*/
+				delete_data(&addressbook, &readinputs, option);
 				
-				/*invoke the function call to edit the tags*/
-				copy_tag_names(&tagedit, argv, argc);
-
+				printf("Deleted Successfully!!!!\n");
+				
+			case 5:
+				
+				/*Invoking the function call to display the contents in the addressbook*/
+				display_add_book(&readinputs);
+				
 				break;
+
+			case 6:
+
+				/*exit the loop*/
+				return 0;
 
 			default:
 
-				printf("Unsupported\n");
-
-				break;
+				printf("Check the option\n");
 		}
 
-		/*Read the continue option*/
+		/*read the continue option*/
 		printf("Do you want to continue: (y/n)");
-
 		scanf("\n%c", &ch);
 
-	} while (ch == 'y');
-
-	return 0;
+	} while(ch == 'y');
 }
